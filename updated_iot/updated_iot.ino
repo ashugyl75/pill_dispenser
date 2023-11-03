@@ -1,6 +1,11 @@
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <Firebase_ESP_Client.h>
+
+#include <Wire.h>  // This library is already built in to the Arduino IDE
+#include <LiquidCrystal_I2C.h> //This library you can add via Include Library > Manage Library > 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 // Provide the token generation process info.
 #include <addons/TokenHelper.h>
@@ -56,15 +61,18 @@ unsigned long dataMillis = 0;
 #include <Servo.h>
 
 
-#define ledpin 1
-#define trigpin 2
-#define echopin 3
-#define servo_morn 4
-#define servo_noon 5
-#define servo_even 6
+#define buzzer 1 //D6
+#define trigpin 2 //D7
+#define echopin 3 //D8
+#define servo_morn 4 //D0
+#define servo_noon 5 // D1
+#define servo_even 6 // D2
+#define SDA 7 // D4
+#define SCL 8  //D3
 
 
-int pins[7] = {0,D0, D1, D2, D3, D4, D8};
+
+int pins[9] = {0,D6,D7,D8,D0,D1,D2,D4,D3,}; // try D2 -- SDA and D1 -- SCL for correct lcd work
 
 #define morn 1
 #define noon 2
@@ -110,11 +118,27 @@ void setup() {
 //-------------------------------------------------------------IOT code setup-------------------------------------------------------------------------------
   pinMode(pins[trigpin], OUTPUT);
   pinMode(pins[echopin], INPUT);
-  pinMode(pins[ledpin], OUTPUT);
+  pinMode(pins[buzzer], OUTPUT);
+
+  pinMode(pins[servo_morn], OUTPUT);
+  pinMode(pins[servo_noon], OUTPUT);
+  pinMode(pins[servo_even], OUTPUT);
+
 
   Serial.println();
   Serial.println();
   Serial.println();
+
+  Wire.begin(pins[SDA],pins[SCL]);
+  lcd.init();   // initializing the LCD
+  lcd.backlight(); // Enable or Turn On the backlight
+
+  lcd.print("Welcome :D");
+  delay(2000);
+  lcd.clear();
+  lcd.print("Team:Innovators");
+  lcd.clear();
+  lcd.print("PillGrim ON");
   // ------------------------------------------------------------------IOT code end-----------------------------------------------------------------------------------------
   //------------------------------------------------------------------firbase configuration----------------------------------------------------------------------------------------
   Serial.printf("Firebase Client v%s\n\n", FIREBASE_CLIENT_VERSION);
@@ -181,8 +205,23 @@ void loop() {
       if(update_val_int == 123) // then the command is to set time
       {
         //Firebase.Firestore.getString(fbdo, "/preset_time/" + update_val), &preset_time[update_val]) ? Serial.println("successfully fetched preset_time value") : Serial.println("unable to fetch preset_time variable, ERROR: %s",fbdo.errorReason().c_str());
-        if(firebase_get_string("/Schedule/Monday","Morning", preset_time[1], "string") && firebase_get_string("/Schedule/Monday","Afternoon", preset_time[2], "string") && firebase_get_string("/Schedule/Monday","Evening", preset_time[3], "string"))
+        if(firebase_get_string("/Schedule/Monday","Morning", preset_time[1], "string") && firebase_get_string("/Schedule/Monday","Afternoon", preset_time[2], "string") && firebase_get_string("/Schedule/Monday","Evening", preset_time[3], "string")){
           Serial.println("succesfully updated preset time array");
+          lcd.clear();
+          lcd.print("Morn: ");
+          lcd.print(preset_time[1]);
+          delay(2000);
+          lcd.clear();
+          lcd.print("Noon: ");
+          lcd.print(preset_time[2]);
+          delay(2000);
+          lcd.clear();
+          lcd.print("Even: ");
+          lcd.print(preset_time[3]);
+          delay(2000);
+          lcd.clear();
+          lcd.print("PillGrim ON");
+        }  
         else
           Serial.println("unable to set preset time array");
       }
@@ -241,7 +280,9 @@ void loop() {
   timeClient.update();
   button_state = UV_output();
   
-  button_state? digitalWrite(pins[ledpin], HIGH) : digitalWrite(pins[ledpin], LOW);
+  if(button_state){
+    Buzzer(2);
+  }
 
   if(button_state && whattime!= 0){ // button is pressed and it is time to take medicine
     int current_day = timeClient.getDay();
@@ -258,9 +299,10 @@ delay(10000);
 }
 
 void drop_med(int servo, int time, int current_day){
+  // 45--1, 90--2, 135--3, 180--4
   Servo s;
   s.attach(servo,500,2500);
-  s.write(45);
+  s.write(45*current_day);
   s.detach();
  // update the boolean in the database to true
   
@@ -288,16 +330,6 @@ bool UV_output() {
   }
 }
 
-
-
-void firebase_set(bool data){
-  // Serial.printf("Set bool... %s\n", Firebase.setBool(fbdo, F("/monday/morning/pill_taken"),false) ? "ok" : fbdo.errorReason().c_str());
-  
-//  Serial.printf("Set int... %s\n", Firebase.setInt(fbdo, F("/test/int"), count) ? "ok" : fbdo.errorReason().c_str());
-//  Serial.printf("Set float... %s\n", Firebase.setFloat(fbdo, F("/test/float"), count + 10.2) ? "ok" : fbdo.errorReason().c_str());
-//  Serial.printf("Set double... %s\n", Firebase.setDouble(fbdo, F("/test/double"), count + 35.517549723765) ? "ok" : fbdo.errorReason().c_str());
-//  Serial.printf("Set string... %s\n", Firebase.setString(fbdo, F("/test/string"), "Hello World!") ? "ok" : fbdo.errorReason().c_str());
-}
 
 
 bool firebase_get_string(String path, String mask, String& temp_update_time, String datatype){
@@ -337,9 +369,17 @@ bool firebase_get_string(String path, String mask, String& temp_update_time, Str
 
 // }
 
-
-
-
-void refill_mode(){
-
+void Buzzer(int time){
+  int sec = 0;
+  while(sec<=time){
+    digitalWrite(pins[buzzer], HIGH);
+    delay(200);
+    digitalWrite(pins[buzzer], LOW);
+    delay(200);  
+    sec++;
+  }
 }
+
+// void refill_mode(){
+
+// }
