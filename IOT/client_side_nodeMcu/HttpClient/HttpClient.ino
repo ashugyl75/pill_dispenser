@@ -21,9 +21,9 @@
 #define echoPin D6
 
 ESP8266WiFiMulti WiFiMulti;
-const char* ssid = "sunil";  // connect to hotspot
+const char* ssid = "internet";  // connect to hotspot
 const char* password = "12345678";
-const char* serverUrl = "http://172.26.26.47:5000/receive_data";  // flask server
+const char* serverUrl = "http://192.168.223.236:5000/receive_data";  // flask server
 
 int button_state;
 int ledPin = D8;
@@ -35,7 +35,7 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 19800); //19800 is utc time offset for india
 
 unsigned long previous;
-String preset_time = "13:40:00";  // preset time for taking the medicine
+String preset_time = "11:52:00";  // preset time for taking the medicine
 
 
 void setup() {
@@ -79,7 +79,7 @@ void loop() {
   }
 
 
-  if(timeClient.getFormattedTime()==preset_time){ // if time is exactly equal to preset time        // for exhbition mode, where the pill will drop every 5 minutes
+  if(timeClient.getFormattedTime()>=preset_time){ // if time is exactly equal to preset time        // for exhbition mode, where the pill will drop every 5 minutes
       send_message("time%20to%20take%20your%20pill", "123");
       booltime = true;
       previous = millis();
