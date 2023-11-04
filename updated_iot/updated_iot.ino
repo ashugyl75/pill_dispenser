@@ -11,8 +11,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 #include <addons/TokenHelper.h>
 
 /* 1. Define the WiFi credentials */
-#define WIFI_SSID "Bklol 4G"
-#define WIFI_PASSWORD "Nhibtaunga"
+#define WIFI_SSID "internet"
+#define WIFI_PASSWORD "12345678"
 
 /* 2. Define the API Key */
 #define API_KEY "AIzaSyDBdbu-84whBLw97Al4DYEk5uTNJEswKv4"
@@ -88,8 +88,8 @@ int button_state;
 
 int whattime = 0; //which motor's time is it to run
 
-String DAYS = {"Sunday","Monday","Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-String TIME = {"Morning", "Afternoon", "Evening"};
+String DAYS[7] = {"Sunday","Monday","Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+String TIME[3] = {"Morning", "Afternoon", "Evening"};
 
 
 String update_time = ""; //to track if there is any new update from the server
@@ -283,9 +283,10 @@ void loop() {
   
   timeClient.update();
   button_state = UV_output();
-  
+  Serial.print("UV ON/OFF :");
+  Serial.println(button_state);
   if(button_state){
-    Buzzer(2);
+    Buzzer(4);
   }
 
   if(button_state && whattime!= 0){ // button is pressed and it is time to take medicine
@@ -298,7 +299,7 @@ void loop() {
 
 
 
-delay(10000);
+delay(1000);
 
 }
 
@@ -322,7 +323,9 @@ void drop_med(int servo, int time, int current_day){
   s.detach(); // detaching the servo
   delay(1000);
   lcd.clear();
-  lcd.print("thank you for taking your pill");
+  lcd.print("thank you for ");
+  lcd.setCursor(0,1);
+  lcd.print("taking your pill");
   delay(3000);
   lcd.clear();
   lcd.print("PillGrim is ON");
@@ -333,7 +336,7 @@ void drop_med(int servo, int time, int current_day){
 
 
 bool UV_output() {
-  long duration, distance;
+  double duration, distance;
 
   digitalWrite(pins[trigpin], LOW);
   delayMicroseconds(2);
@@ -342,10 +345,13 @@ bool UV_output() {
   delayMicroseconds(10);
   digitalWrite(pins[trigpin], LOW);
 
-  duration = pulseIn(echopin, HIGH);
-  distance = (duration * 0.0343) / 2;
-
-  if (distance < 7) {
+  duration = pulseIn(pins[echopin], HIGH);
+  distance = (duration * 0.0343) / 2.0;
+  Serial.print("duration from UV sensor");
+  Serial.println(duration);
+  Serial.print("distance from UV sensor: ");
+  Serial.println(distance);
+  if ((distance>2) && (distance<15)) {
     return true; // hand is less than 7 cm away return true
   } else {
     return false; // hand is 7 cm or farther away return false
@@ -401,35 +407,36 @@ void Buzzer(int time){
 }
 
 void refill_mode(){
-  // 45--1, 90--2, 135--3, 180--4
-  lcd.clear();
-  lcd.print("Refill Mode On...");
-  delay(500);
-  for(int servo=4; servo<=6; servo++){
-    s.attach(pins[servo],500,2500);
-    for(int day = 4; day>0; day++){
-      s.write(day*45);
-      lcd.clear();
-      lcd.print("Refill " + DAYS[day]);
-      delay(50);
-      lcd.setCursor(0,1);
-      lcd.print(TIME[servo-4] + " pill");
-      Buzzer(1);
-      for(int temp=30; temp>=0; temp--){
-        lcd.clear();
-        lcd.print("Time Left: "+ temp);
-        delay(1000);// one sec delay
-      }
-      Buzzer(1);
-    }
-    s.write(0);
-    s.detach();
-  }
-  lcd.clear();
-  lcd.print("Refill Complete!!!");
-  lcd.setCursor(0,1);
-  lcd.print("Thank You!");
-  delay(2000);
-  lcd.clear();
-  lcd.print("PillGrim is ON");
+  // // 45--1, 90--2, 135--3, 180--4
+  // lcd.clear();
+  // lcd.print("Refill Mode On...");
+  // delay(500);
+  // for(int servo=4; servo<=6; servo++){
+  //   s.attach(pins[servo],500,2500);
+  //   for(int day = 4; day>0; day--){
+  //     s.write(day*45);
+  //     lcd.clear();
+  //     lcd.print("Refill " + DAYS[day]);
+  //     delay(2000);
+  //     lcd.setCursor(0,1);
+  //     lcd.print(TIME[servo-4] + " pill");
+  //     Buzzer(1);
+  //     for(int temp=20; temp>=0; temp--){
+  //       lcd.clear();
+  //       // lcd.print("Time Left: ");
+  //       // lcd.print(itoa(temp));
+  //       delay(1000);// one sec delay
+  //     }
+  //     Buzzer(1);
+  //   }
+  //   s.write(0);
+  //   s.detach();
+  // }
+  // // lcd.clear();
+  // // lcd.print("Refill Complete!!!");
+  // // lcd.setCursor(0,1);
+  // // lcd.print("Thank You!");
+  // // delay(2000);
+  // lcd.clear();
+  // lcd.print("PillGrim is ON");
 }
