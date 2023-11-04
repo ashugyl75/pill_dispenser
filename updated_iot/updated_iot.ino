@@ -72,8 +72,8 @@ unsigned long dataMillis = 0;
 
 
 
-int pins[9] = {0,D6,D7,D8,D0,D1,D2,D4,D3,}; // try D2 -- SDA and D1 -- SCL for correct lcd work
-
+int pins[9] = {0,D6,D7,D8,D0,D1,D2,D4,D3}; // try D2 -- SDA and D1 -- SCL for correct lcd work
+Servo s;
 #define morn 1
 #define noon 2
 #define even 3
@@ -88,7 +88,8 @@ int button_state;
 
 int whattime = 0; //which motor's time is it to run
 
-
+String DAYS = {"Sunday","Monday","Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+String TIME = {"Morning", "Afternoon", "Evening"};
 
 
 String update_time = ""; //to track if there is any new update from the server
@@ -238,6 +239,9 @@ void loop() {
         drop_med(pins[update_val_int], update_val_int,  day.toInt());
       }
 
+      else if(update_val_int==7){
+        refill_mode();
+      }
       else{ // we get an undesignated value, error
         Serial.print("update_time variable got a value other than predefined values: "); // other than 123, 4,5,6
         Serial.println(update_val_int);
@@ -264,7 +268,7 @@ void loop() {
   
 
 
-//----------------------------------------------------------------------------select which motors time is it to run based on current time----------------------------------------------------------------------------------------------
+//------------------------------------------------select which motors time is it to run based on current time---------------------------------------------------------------------------------------
   String current_time = timeClient.getFormattedTime();
 
   if(current_time==preset_time[morn])
@@ -300,10 +304,28 @@ delay(10000);
 
 void drop_med(int servo, int time, int current_day){
   // 45--1, 90--2, 135--3, 180--4
-  Servo s;
+  if(current_day==5){ // if the day is friday return, it is time to refill
+    lcd.clear();
+    lcd.print("out of pills, please Refill");
+    delay(2000);
+    return;
+  }
   s.attach(servo,500,2500);
+  lcd.clear();
+  lcd.print(".........");
+  lcd.clear();
+  delay(500);
+  lcd.print("dispatching pill.....");
+  delay(500);
+  Buzzer(3); // Buzz for 3 seconds
   s.write(45*current_day);
-  s.detach();
+  s.detach(); // detaching the servo
+  delay(1000);
+  lcd.clear();
+  lcd.print("thank you for taking your pill");
+  delay(3000);
+  lcd.clear();
+  lcd.print("PillGrim is ON");
  // update the boolean in the database to true
   
   // firbase_update(current_day, time); // change the current day and time's vale to true
@@ -361,9 +383,7 @@ bool firebase_get_string(String path, String mask, String& temp_update_time, Str
 
 
 // void firebase_update(int day, int time){
-//   FirebaseJson json;
-//   String day = {"Monday", "Tueday", "Wednesday", "Thursday", "Friday", "Saturday"};
-//   String time = {"Morning", "Afternoon", "Evening"};
+//   FirebaseJson json;  
 
   
 
@@ -380,6 +400,36 @@ void Buzzer(int time){
   }
 }
 
-// void refill_mode(){
-
-// }
+void refill_mode(){
+  // 45--1, 90--2, 135--3, 180--4
+  lcd.clear();
+  lcd.print("Refill Mode On...");
+  delay(500);
+  for(int servo=4; servo<=6; servo++){
+    s.attach(pins[servo],500,2500);
+    for(int day = 4; day>0; day++){
+      s.write(day*45);
+      lcd.clear();
+      lcd.print("Refill " + DAYS[day]);
+      delay(50);
+      lcd.setCursor(0,1);
+      lcd.print(TIME[servo-4] + " pill");
+      Buzzer(1);
+      for(int temp=30; temp>=0; temp--){
+        lcd.clear();
+        lcd.print("Time Left: "+ temp);
+        delay(1000);// one sec delay
+      }
+      Buzzer(1);
+    }
+    s.write(0);
+    s.detach();
+  }
+  lcd.clear();
+  lcd.print("Refill Complete!!!");
+  lcd.setCursor(0,1);
+  lcd.print("Thank You!");
+  delay(2000);
+  lcd.clear();
+  lcd.print("PillGrim is ON");
+}
